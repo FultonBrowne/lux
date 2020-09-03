@@ -77,46 +77,6 @@ is_percentage() {
     echo "${1}" | grep -E '%$' >/dev/null 2>&1 || return 1
 }
 
-check_perm() {
-    _ctrl="${1}"
-    udev_rule="/etc/udev/rules.d/99-lux.rules"
-
-    if [ ! -w "${_ctrl}/brightness" ] ; then
-        if [ "$(id -u)" -ne 0 ]; then
-            if ! id -nG "${USER}" | grep video >/dev/null 2>&1; then
-                echo "Use sudo once to setup group permissions,"
-                echo "to access to controller's brightness from user."
-            else
-                echo "To setup the group permissions permanently, you need to logout/login."
-            fi
-            exit
-        fi
-    fi
-
-    if [ "$(id -u)" -eq 0 ]; then
-        if ! cut -d: -f1 /etc/group | grep video >/dev/null 2>&1; then
-            echo "Group ~video~ does not exist."
-            exit 1
-        fi
-
-        if [ -z "$(find "${_ctrl}" -name 'brightness' -group video)" ]; then
-            if [ ! -f "${udev_rule}" ] ; then
-                echo "${udev_rule}: missing file."
-                exit 1
-            fi
-            udevadm control -R
-            udevadm trigger -c add -s backlight
-        fi
-
-        if ! id -nG "${SUDO_USER}" | grep video >/dev/null 2>&1; then
-            usermod -a -G video "${SUDO_USER}"
-            echo "User has been added to ~video~ group."
-            echo "To setup the group permissions permanently, you need to logout/login."
-            exit
-        fi
-    fi
-}
-
 main() {
     gFlag=false
     mFlag=false
@@ -206,7 +166,6 @@ main() {
         fi
     fi
 
-    check_perm "${best_controller}"
 
     file="${best_controller}/brightness"
     brightness=$(cat "${file}")
